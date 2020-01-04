@@ -1,0 +1,518 @@
+---
+title: "House Price Prediction"
+author: "Saurav Chetry"
+date: "January 3, 2020"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+library(leaps)
+library(mlbench)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(lmtest)
+library(faraway)
+library(MASS)
+```
+
+
+
+**Data Selection:**
+
+From Library **mlbench**, I am using **BostonHousing2** dataset, which is a dataframe of 506 observations and 19 attributes. The project will consider **cmedv** variable as the response from its relationships with other predictor variables. The dataset has two categorical variables, viz, **town** and **chas** and would be evaluated for determining the response. 
+
+**Analysis:**
+
+**a. Introduction:**
+
+**Statement**: Here, I will make an attempt to analyse the dataset to select a right model for predicting house prices in Boston. 
+
+**BostonHousing2** is a database with housing information around Boston city from the 1970 census, and lists down the median house prices in USD 1000's. The dataframe **BostonHousing2** is the corrected version with additional spatial information and is available at: http://lib.stat.cmu.edu/datasets/
+
+The original data are 506 observations on 14 variables, $cmedv$ being the target variable:
+The following table summarizes the attributes and their types:
+
+| Attribute | Description                                                      | Data Type |
+|-----------|------------------------------------------------------------------|-----------|
+| **crim** | per capita crime rate by town                                         | Factor    |
+| **zn** | proportion of residential land zoned for lots over 25,000 sq.ft         | num       |
+| **indus** | proportion of non-retail business acres per town                     | num       |
+| **chas** | Charles River dummy variable (= 1 if tract bounds river; 0 otherwise) | Factor    | 
+| **nox** | nitric oxides concentration (parts per 10 million)                     | num       |
+| **rm** | average number of rooms per dwelling                                    | num       |
+| **age** | proportion of owner-occupied units built prior to 1940                 | num       |
+| **dis** | weighted distances to five Boston employment centres                   | num       |
+| **rad** | index of accessibility to radial highways                              | int       |
+| **tax** | full-value property-tax rate per USD 10,000                            | int       |        
+| **ptratio** | pupil-teacher ratio by town                                        | num       |
+| **b** | 1000(B - 0.63)^2 where B is the proportion of blacks by town             | num       |	        
+| **lstat** | percentage of lower status of the population                         | num       |
+| **medv** | median value of owner-occupied homes in USD 1000's                    | num       |
+| **cmedv** | corrected median value of owner-occupied homes in USD 1000's         | num       |
+| **town** | name of town                                                          | Factor    |
+| **tract** | census tract                                                         | int       |
+| **lon** | longitude of census tract                                              | num       |
+| **lat** | latitude of census tract                                               | num       |
+
+
+With regards to predicting the house prices, the attributes that I think would be valuable are: **ptratio, town, rad, dis, rm, nox and crim** and I would use them to fit the best model for this project.
+
+**b. Methods:**
+
+
+```{r}
+#install.packages("mlbench")
+#?BostonHousing2
+
+data("BostonHousing2")
+BostonHousing2 = na.omit(BostonHousing2)
+
+#dropping attributes which are highly collinear(mdev) and those with location details(lat,lon,town) and industrial areas(indus)
+BostonHousing2 = subset(BostonHousing2, select = -c(medv,tract,lon,lat,indus,town))
+
+#test-train split
+
+split = round(nrow(BostonHousing2) * .80)
+bos_trn = BostonHousing2[1:split,]
+bos_tst = BostonHousing2[(split + 1):nrow(BostonHousing2),]
+
+#full model and its summary
+bm = lm( cmedv ~ ., data = bos_trn)
+
+#filtering on the statistically significant predictors for medv at alpha = 0.01
+summary(bm)$coefficients
+```
+```{r}
+subset(summary(bm)$coefficients,summary(bm)$coefficients[,4] < 0.05)
+```
+
+From the summary of the fitted model, the *age* & *b* attribute does not look good as the **Null Hypothesis of the predictors( in presence with other predictor) of the full model Fails to be Rejected**.
+
+Next, I will fit a model with predictor which I think are statistically significant at $alpha = 0.05$. 
+
+```{r}
+model1 = lm(cmedv ~ ptratio + rad + dis + rm + nox + crim + chas + lstat + zn + tax, data = bos_trn)
+subset(summary(model1)$coefficients,summary(model1)$coefficients[,4] < 0.05)
+```
+
+This model looks to have better predictor set, as all predictor's **Null Hypothesis is Rejected**
+Next, I will attempt to find predictors which are significant at $alpha = 0.01$
+
+```{r}
+#finding significant predictors at lower significance levels alpha  = 0.01
+subset(summary(model1)$coefficients, summary(model1)$coefficients[,4] < 0.01)
+```
+
+```{r}
+#fitting the significant predictors( chas turns out to be not significant)
+model2 = lm(cmedv ~ ptratio + rad + dis + rm + nox + crim + lstat + zn + tax, data = bos_trn)
+summary(model2)$r.squared
+```
+
+From the above test, I will choose to use the model2 for further analysis and verification.
+
+**Verification of model2 **
+
+```{r}
+#AIC test
+model_selected_aic = step(bm, direction = "backward", trace = 0)
+names(coef(model_selected_aic))
+summary(model_selected_aic)$r.squared
+```
+
+
+
+```{r}
+#AIC test 2 with two way interactions
+model_start = lm(cmedv ~ (.)^2, data = bos_trn)
+model_selected_aic_int = step(model_start, direction = "backward", trace = 0)
+names(coef(model_selected_aic_int))
+summary(model_selected_aic_int)$r.squared
+```
+
+Comparing the AIC selected model with full model and model2
+
+```{r}
+#comparing model2 with full model
+anova(model2, bm)[2,"Pr(>F)"]
+```
+
+As $p-value$ is big, preferred model is model2
+
+```{r}
+#comparing model2, selected model from AIC and selected model from AIC with interactions.
+anova(model_selected_aic,model2)[2,"Pr(>F)"]
+anova(model_selected_aic, model_selected_aic_int)[2,"Pr(>F)"]
+
+```
+
+Based on the Anova tests, the preferred model is still the **model_selected_aic_int** which also has the highest $r.squared$ value.
+
+**Further Analysis of the preferred model**
+
+```{r}
+par(mfrow = c(2,2))
+plot(model_selected_aic_int)
+sqrt(mean(resid(model_selected_aic_int) ^ 2))
+```
+
+**Checking the assumptions for constant variance and normal distribution**
+From the Fitted vs Residual plot and Q-Q plot, there appears some violation of assumptions. I will perform the Breusch-Pagan Test and Shapiro-Wilk test for further checks.
+
+```{r}
+bptest(model_selected_aic_int)
+```
+
+For BP test on *model_selected_aic_int*, we see a small p-value, so we reject the null of homoscedasticity. The constant variance assumption is violated. This matches our findings with a fitted versus residuals plot.
+
+```{r}
+shapiro.test(resid(model_selected_aic_int))
+```
+
+From the Shapiro-Wilk test for model_selected_aic2, a small $p-value$ indicates there is only a small probability the data could have been sampled from a normal distribution.
+
+**From model diagnostics, it is confirmed that model_selected_aic_int needs further analysis and modifications like response and predictor transformations, predictor interactions and polynomial terms. Besides these, I will also test the effect of outliers, leverage and influential points and cleanse the dataset accordingly**
+
+```{r}
+
+#finding outliers and influential points
+
+sum(hatvalues(model_selected_aic_int) > 2 * mean(hatvalues(model_selected_aic_int)))
+sum(abs(rstandard(model_selected_aic_int)) > 2, na.rm = TRUE)
+inf_points = cooks.distance(model_selected_aic_int)
+sum(inf_points > 4 / length(inf_points), na.rm = TRUE)
+rem_points = inf_points > 4 / length(inf_points)
+
+```
+
+model_selected_aic_int has 45 points of high leverage and 20 point with large residual. Among these 40 points are influential from Cooks Distance calculation.
+
+```{r}
+
+#removing influential points to check model assumptions
+model_aic_int_fix = lm(model_selected_aic_int, subset = inf_points <= 4 / length(inf_points))
+
+
+```
+
+Lets verify the plots and diagnostic tests again on *model_aic_int_fix*
+
+```{r}
+par(mfrow = c(2,2))
+plot(model_aic_int_fix)
+bptest(model_aic_int_fix)
+shapiro.test(resid(model_aic_int_fix))
+
+summary(model_aic_int_fix)$r.squared
+```
+
+From the above checks, I can confirm that the removal of influential points does improve the model diagnostics. **All assumptions are now valid and as next step I will perform response and predictor transformation to analyse further.**
+
+As I intend to have a prediction model, lets compare the models so far with respect to train RMSE, test RMSE and LOOCV-RMSE.
+
+```{r}
+#rmse definition
+rmse = function(actual, predicted) {
+  sqrt(mean((actual - predicted) ^ 2))
+}
+```
+
+
+```{r}
+
+# RMSE Calculations
+result = data.frame('Model' = c('model2', 'model_selected_aic', 'model_selected_aic_int', 'model_aic_int_fix'),
+                    'Train RMSE' = c(rmse(bos_trn$cmedv, predict(model2)), rmse(bos_trn$cmedv, predict(model_selected_aic)), rmse(bos_trn$cmedv, predict(model_selected_aic_int)),rmse(bos_trn$cmedv, predict(model_aic_int_fix))),
+                    'Test RMSE' = c(rmse(bos_tst$cmedv, predict(model2, bos_tst)), rmse(bos_tst$cmedv, predict(model_selected_aic, bos_tst)), rmse(bos_tst$cmedv, predict(model_selected_aic_int, bos_tst)),  rmse(bos_tst$cmedv, predict(model_aic_int_fix, bos_tst))))
+
+
+result %>%
+  kable(digits = 2) %>%
+  kable_styling()
+```
+
+
+```{r}
+#LOOCV-RMSE
+
+calc_loocv_rmse = function(model) {
+  sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
+}
+calc_loocv_rmse(model2)
+calc_loocv_rmse(model_selected_aic)
+calc_loocv_rmse(model_selected_aic_int)
+calc_loocv_rmse(model_aic_int_fix)
+
+```
+
+```{r}
+#actual vs predicted
+
+par(mfrow = c(2,2))
+
+plot(predict(model2, bos_tst),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model2")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+
+plot(predict(model_selected_aic, bos_tst),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_selected_aic")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+
+plot(predict(model_selected_aic_int, bos_tst),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_selected_aic_int")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+
+plot(predict(model_aic_int_fix, bos_tst),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_aic_int_fix")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+```
+
+
+From the RMSE, LOOCV-RMSE and actual predicted plots, none of the models seems to be performing a better prediction. Majority of the predicted median house prices are higher than the actual prices.
+
+As next steps, I will check for transformations of the predictor and response and check for lowest RMSE values.
+
+```{r}
+#response transformation for assumably significant variables.
+
+model_res_trans = lm(log(cmedv) ~ ptratio + rm + crim + nox + b + lstat + age + dis + rad + tax, data = bos_trn)
+
+par(mfrow = c(2,2))
+plot(model_res_trans)
+bptest(model_res_trans)
+shapiro.test(resid(model_res_trans))
+```
+
+The response transformation, does not have a conforming model assumptions.
+
+```{r}
+#finding outliers and influential points
+
+sum(hatvalues(model_res_trans) > 2 * mean(hatvalues(model_res_trans)))
+sum(abs(rstandard(model_res_trans)) > 2, na.rm = TRUE)
+inf_points2 = cooks.distance(model_res_trans)
+sum(inf_points2 > 4 / length(inf_points2), na.rm = TRUE)
+rem_points2 = inf_points2 > 4 / length(inf_points2)
+
+```
+
+model_res_trans has 29 points of high leverage and 19 point with large residual. Among these 27 points are influential from Cooks Distance calculation.
+
+```{r}
+
+#removing influential points to check model assumptions
+model_res_trans_fix = lm(model_res_trans, subset = inf_points2 <= 4 / length(inf_points2))
+
+#checking assumptions
+par(mfrow = c(2,2))
+plot(model_res_trans_fix)
+bptest(model_res_trans_fix)
+shapiro.test(resid(model_res_trans_fix))
+
+summary(model_res_trans_fix)$r.squared
+calc_loocv_rmse(model_res_trans_fix)
+rmse(bos_trn$cmedv, exp(predict(model_res_trans_fix)))
+rmse(bos_tst$cmedv, exp(predict(model_res_trans_fix, bos_tst)))
+```
+
+There is an improvement in the normality assumption as well as in test RMSE value. 
+
+```{r}
+
+#Predictor transformation
+
+pairs(~ cmedv + ptratio + b + lstat + dis + rm + crim, data = bos_trn, pch = 1, col = "darkorange")
+
+```
+
+```{r}
+
+# lstat and rm seem to have linear relationship with cmedv. Adding polynomial terms to check the fitted model.
+
+model_pred_trans = lm(cmedv ~ lstat + crim + rm + dis + b + chas + nox + rad + tax + ptratio + I(lstat^2) + I(rm^2) , data = bos_trn)
+
+par(mfrow = c(2,2))
+plot(model_pred_trans)
+bptest(model_pred_trans)
+shapiro.test(resid(model_pred_trans))
+```
+
+Model assumptions are violated.
+
+```{r}
+#finding outliers and influential points
+
+sum(hatvalues(model_pred_trans) > 2 * mean(hatvalues(model_pred_trans)))
+sum(abs(rstandard(model_pred_trans)) > 2, na.rm = TRUE)
+inf_points3 = cooks.distance(model_pred_trans)
+sum(inf_points3 > 4 / length(inf_points3), na.rm = TRUE)
+rem_points3 = inf_points3 > 4 / length(inf_points3)
+```
+
+model_pred_trans has 32 points of high leverage and 13 point with large residual. Among these 17 points are influential from Cooks Distance calculation.
+
+```{r}
+
+#removing influential points to check model assumptions
+model_pred_trans_fix = lm(model_pred_trans, subset = inf_points3 <= 4 / length(inf_points3))
+
+#checking assumptions
+par(mfrow = c(2,2))
+plot(model_pred_trans_fix)
+bptest(model_pred_trans_fix)
+shapiro.test(resid(model_pred_trans_fix))
+
+summary(model_pred_trans_fix)$r.squared
+calc_loocv_rmse(model_pred_trans_fix)
+rmse(bos_trn$cmedv, predict(model_pred_trans_fix))
+rmse(bos_tst$cmedv, predict(model_pred_trans_fix, bos_tst))
+```
+
+** Experimenting with both predictor and response transformaion**
+
+```{r}
+model_mix = lm(log(cmedv) ~ ptratio + rm + crim + nox + b + lstat + age + dis + rad + tax + I(rm ^2) + I(lstat ^2), data = bos_trn)
+inf_points4 = cooks.distance(model_mix)
+model_mix_fix = lm(model_mix, subset = inf_points4 <= 4 / length(inf_points4) )
+
+par(mfrow = c(2,2))
+plot(model_mix_fix)
+bptest(model_mix_fix)
+shapiro.test(resid(model_mix_fix))
+
+summary(model_mix_fix)$r.squared
+calc_loocv_rmse(model_mix_fix)
+rmse(bos_trn$cmedv, exp(predict(model_mix_fix)))
+rmse(bos_tst$cmedv, exp(predict(model_mix_fix, bos_tst)))
+```
+
+
+As I only care about prediction, I don't need to worry about correlation vs causation, or need to worry about model assumptions, therefore I will directly jump to finding out the best model with lowest RMSE & LOOCV RMSE values found via penalizing the overfitting large models by using one of AIC or BIC methods.
+
+
+
+```{r warning=FALSE}
+
+result = data.frame('Model' = c('model2', 'model_selected_aic', 'model_selected_aic_int', 'model_pred_trans', 'model_res_trans', 'model_aic_int_fix', 'model_res_trans_fix', 'model_pred_trans_fix','model_mix_fix'),
+                    
+                    'Train RMSE' = c(rmse(bos_trn$cmedv, predict(model2)), rmse(bos_trn$cmedv, predict(model_selected_aic)), rmse(bos_trn$cmedv, predict(model_selected_aic_int)),rmse(bos_trn$cmedv, predict(model_pred_trans)),rmse(bos_trn$cmedv, exp(predict(model_res_trans))), rmse(bos_trn$cmedv, predict(model_aic_int_fix)),rmse(bos_trn$cmedv, exp(predict(model_res_trans_fix))), rmse(bos_trn$cmedv, predict(model_pred_trans_fix)),rmse(bos_trn$cmedv, exp(predict(model_mix_fix)))),
+                    
+                    'Test RMSE' = c(rmse(bos_tst$cmedv, predict(model2, bos_tst)), rmse(bos_tst$cmedv, predict(model_selected_aic, bos_tst)), rmse(bos_tst$cmedv, predict(model_selected_aic_int, bos_tst)), rmse(bos_tst$cmedv, predict(model_pred_trans, bos_tst)),rmse(bos_tst$cmedv, exp(predict(model_res_trans, bos_tst))), rmse(bos_tst$cmedv, predict(model_aic_int_fix, bos_tst)), rmse(bos_tst$cmedv, exp(predict(model_res_trans_fix, bos_tst))), rmse(bos_tst$cmedv, predict(model_pred_trans_fix, bos_tst)),rmse(bos_tst$cmedv, exp(predict(model_mix_fix, bos_tst)))),
+                    
+                    'LOOCV-RMSE' = c(calc_loocv_rmse(model2),calc_loocv_rmse(model_selected_aic),calc_loocv_rmse(model_selected_aic_int),calc_loocv_rmse(model_pred_trans),calc_loocv_rmse(model_res_trans), calc_loocv_rmse(model_aic_int_fix),calc_loocv_rmse(model_res_trans_fix), calc_loocv_rmse(model_pred_trans_fix),calc_loocv_rmse(model_mix_fix)),
+                    
+                    "adj.r.squared" = c(summary(model2)$adj.r.squared, summary(model_selected_aic)$adj.r.squared, summary(model_selected_aic_int)$adj.r.squared, summary(model_pred_trans)$adj.r.squared, summary(model_res_trans)$adj.r.squared, summary(model_aic_int_fix)$adj.r.squared, summary(model_res_trans_fix)$adj.r.squared, summary(model_pred_trans_fix)$adj.r.squared, summary(model_mix_fix)$adj.r.squared)
+                    
+)
+
+kable(result, digits = 2) %>%
+  kable_styling("striped", full_width = T) %>%
+  column_spec(3:4, bold = T) %>%
+  row_spec(9:9, bold = T, color = "white", background = "green")
+```
+
+**c. Results**
+
+From LOOCV-RMSE, the best model seems to be **model_mix_fix**.
+
+Next, I will plot the actual vs predicted median house prices to choose the best model for the predictions.
+
+
+```{r}
+par(mfrow = c(2,2))
+
+plot(predict(model_pred_trans, bos_tst),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_pred_trans")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+
+plot(exp(predict(model_res_trans, bos_tst)),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_res_trans")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+
+plot(predict(model_pred_trans_fix, bos_tst),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_pred_trans_fix")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+
+plot(exp(predict(model_res_trans_fix, bos_tst)),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_res_trans_fix")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+
+```
+```{r}
+par(mfrow = c(2,2))
+
+plot(predict(model2, bos_tst),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model2")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+
+plot(predict(model_selected_aic, bos_tst),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_selected_aic")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+
+plot(predict(model_selected_aic_int, bos_tst),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_selected_aic_int")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+
+plot(predict(model_aic_int_fix, bos_tst),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_aic_int_fix")
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+```
+
+
+I will choose the model with lowest LOOCV-RMSE, which is: 
+**model_mix_fix = lm(log(cmedv) **
+
+
+```{r}
+#99% Confidence & Prediction Interval of the chosen model
+
+which.max(bos_tst$cmedv)
+exp(predict(model_mix_fix, level = 0.99, interval = "confidence", bos_tst[69,] ))
+exp(predict(model_mix_fix, level = 0.99, interval = "prediction", bos_tst[69,] ))
+```
+
+```{r}
+#plotting the best model for prediction.
+
+plot(exp(predict(model_mix_fix, bos_tst)),bos_tst$cmedv, xlab="predicted",ylab="actual",
+     xlim = c( 0, 30), ylim = c(0, 30), col = "dodgerblue", main = "model_pred_trans" )
+abline(a=0,b=1, col = "darkorange", lwd = 2)
+```
+
+
+```{r}
+which.min(bos_tst$cmedv)
+bos_tst[1,]
+predict(model_pred_trans, bos_tst[1,] )
+exp(predict(model_res_trans, bos_tst[1,] ))
+exp(predict(model_res_trans_fix, bos_tst[1,]))
+exp(predict(model_mix_fix, bos_tst[1,]))
+```
+
+**d. discussion**
+
+An important observation during the model selection and diagnostics was the factor variable *town* which I left out from the fitted models for simplicity. So the fitted model esentially takes into acount all significant predictors except the localion factors. However, modern prediction tools do use location/town as one of the major criteria.
+
+The challenges that I faced when selecting **town** was in creating the train and test data sets. I was not able to calculate test RMSE as the test dataset would have new towns which the model wasn't trained in.
+
+Another observation which conforms our study during the course is, for predictions, we do not really need to care about correlation and causation. So, although I fitted a model(*model_selected_aic_int*) which followed constant variance and normal distribution, yet it did not do well for prediction, as it had higher test RMSE. The model chosen for prediction(*model_res_trans_fix*) violated model assumptions, but had the best LOOCV-RMSE and better test RMSE
+
+None of the models could predict the actual prices with 100% accuracy, and I think fitting *town* would improve accuracy.
+
+**e. appendix**
+
+Reference for Statistics with R: https://daviddalpiaz.github.io/appliedstats/.
+
+Kaggle data source: https://www.kaggle.com/andyxie/regression-with-r-boston-housing-price.
+
+Actual data source used: http://lib.stat.cmu.edu/datasets/ available with library *mlbench* in R.
+
+
+
