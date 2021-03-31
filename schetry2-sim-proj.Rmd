@@ -1,0 +1,751 @@
+---
+title: "HW6 - Simulation Project - schetry2"
+author: "Saurav Prem Kaushik Chetry"
+date: "June 11, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+```{r}
+birthday = 19850802
+set.seed(birthday)
+```
+
+Simulation Study 1: Significance of Regression
+
+Introduction: 
+
+The significance of regression simulation is done with the data and values of various parameters(sample size, noise, predictors), provided in the excercise. Two seperate for loops are used each for the signigicant model and non significant model. Empirical distribution for F-statistic, R-squared is done using the "lm" model summary, simulated for 2500 times in a for each of the three values of ??. The p-value from the f-statistic is calculated as per discussions in https://stackoverflow.com/questions/21433528/calculation-p-values-of-a-f-statistic-with-r. Grids are created for empirical distribution for each of the parametes for both models. Comparision with a true value curve is overlayed whereever possible.
+
+
+Method:
+
+The flow of the calculation is linear with many variable declaration and assigment. There are only 2 for loops for significant and non-significant models. For MLR, the lm function summary values are used for determining the F-statistic, R-squared, p-value. The p-value is calculated as pdf using the f-statistic summary for each simulated model with reference to this post https://stackoverflow.com/questions/21433528/calculation-p-values-of-a-f-statistic-with-r
+
+```{r}
+beta_0_s = 3
+beta_1_s = 1
+beta_2_s = 1
+beta_3_s = 1
+p = 4
+```
+
+
+$$
+Significant-Model = Y_i = \beta_0 + 3 x_{i1} + x_{i2} + x_{i3} + \epsilon_i
+$$
+```{r}
+
+beta_0_ns = 3
+beta_1_ns = 0
+beta_2_ns = 0
+beta_3_ns = 0
+
+```
+
+
+
+$$
+NonSignificant-Model = Y_i = \beta_0 + \epsilon_i
+$$
+Variable declaration and assignment. (P.S. Needless to say, I am not a programmer in my current field of work)
+
+
+```{r cache = TRUE}
+data = read.csv("study_1.csv")
+#View(data)
+n = 25
+sigma = c(1,5,10)
+x0 = rep(1, n)
+x1 = data[,2]
+x2 = data[,3]
+x3 = data[,4]
+#X = cbind(x0, x1, x2, x3)
+#C = solve(t(X) %*% X)
+
+# significant model sigma = 1
+
+eps_s_1      = rnorm(n, mean = 0, sd = 1)
+y_s_1        = beta_0_s * x0 + beta_1_s * x1 + beta_2_s * x2 + beta_3_s * x3 + eps_s_1
+sim_data_s_1 = data.frame(x1, x2, x3, y_s_1)
+
+# full_model_s_1 = lm(y_s_1 ~ x0 + x1 + x2 + x3, data = sim_data_s_1)
+
+eps_ns_1      = rnorm(n, mean = 0, sd = 1)
+y_ns_1        = beta_0_ns * x0 + beta_1_ns * x1 + beta_2_ns * x2 + beta_3_ns * x3 + eps_ns_1
+sim_data_ns_1 = data.frame(x1, x2, x3, y_ns_1)
+
+#null_model_ns_1 = lm(y_ns_1 ~ x0 + x1 + x2 + x3, data = sim_data_ns_1)
+
+# significant model sigma = 5
+eps_s_5      = rnorm(n, mean = 0, sd = 5)
+y_s_5      = beta_0_s * x0 + beta_1_s * x1 + beta_2_s * x2 + beta_3_s * x3 + eps_s_5
+sim_data_s_5 = data.frame(x1, x2, x3, y_s_5)
+
+#full_model_s_5 = lm(y_s_5 ~ x0 + x1 + x2 + x3, data = sim_data_s_5)
+
+eps_ns_5      = rnorm(n, mean = 0, sd = 5)
+y_ns_5      = beta_0_ns * x0 + beta_1_ns * x1 + beta_2_ns * x2 + beta_3_ns * x3 + eps_ns_5
+sim_data_ns_5 = data.frame(x1, x2, x3, y_ns_5)
+
+#null_model_ns_5 = lm(y_ns_5 ~ x0 + x1 + x2 + x3, data = sim_data_ns_5)
+
+# significant model sigma = 10
+eps_s_10      = rnorm(n, mean = 0, sd = 10)
+y_s_10        = beta_0_s * x0 + beta_1_s * x1 + beta_2_s * x2 + beta_3_s * x3 + eps_s_10
+sim_data_s_10 = data.frame(x1, x2, x3, y_s_10)
+
+#full_model_s_10 = lm(y_s_10 ~ x0 + x1 + x2 + x3, data = sim_data_s_10)
+
+eps_ns_10      = rnorm(n, mean = 0, sd = 10)
+y_ns_10        = beta_0_ns * x0 + beta_1_ns * x1 + beta_2_ns * x2 + beta_3_ns * x3 + eps_ns_10
+sim_data_ns_10 = data.frame(x1, x2, x3, y_ns_10)
+
+#null_model_ns_10 = lm(y_ns_10 ~ x0 + x1 + x2 + x3, data = sim_data_ns_10)
+
+
+```
+
+Simulations with for loops. Calculating and storing the F-stats, R-squared and p-vals from each iteration of simulations.
+```{r warning=FALSE, cache = TRUE}
+
+# significant model sigma = 1,5,10
+num_sims = 2500
+
+f_stat_s_1 = rep(0, num_sims)
+p_val_s_1 = rep(0, num_sims)
+r2_s_1 = rep(0, num_sims)
+f_stat_s_5 = rep(0, num_sims)
+p_val_s_5 = rep(0, num_sims)
+r2_s_5 = rep(0, num_sims)
+f_stat_s_10 = rep(0, num_sims)
+p_val_s_10 = rep(0, num_sims)
+r2_s_10 = rep(0, num_sims)
+
+for(i in 1:num_sims) {
+  eps1           = rnorm(n, mean = 0 , sd = 1)
+  eps5           = rnorm(n, mean = 0 , sd = 5)
+  eps10           = rnorm(n, mean = 0 , sd = 10)
+  sim_data_s_1$y_s_1    = beta_0_s * x0 + beta_1_s * x1 + beta_2_s * x2 + beta_3_s * x3 + eps1
+  sim_data_s_5$y_s_5    = beta_0_s * x0 + beta_1_s * x1 + beta_2_s * x2 + beta_3_s * x3 + eps5
+  sim_data_s_10$y_s_10    = beta_0_s * x0 + beta_1_s * x1 + beta_2_s * x2 + beta_3_s * x3 + eps10
+  fit_1           = lm(y_s_1 ~ x1 + x2 + x3, data = sim_data_s_1)
+  fit_5          = lm(y_s_5 ~ x1 + x2 + x3, data = sim_data_s_5)
+  fit_10          = lm(y_s_10 ~ x1 + x2 + x3, data = sim_data_s_10)
+  f_stat_s_1[i] = summary(fit_1)$fstatistic
+  f_stat_s_5[i] = summary(fit_5)$fstatistic
+  f_stat_s_10[i] = summary(fit_10)$fstatistic
+  r2_s_1[i] = summary(fit_1)$r.squared
+  r2_s_5[i] = summary(fit_5)$r.squared
+  r2_s_10[i] = summary(fit_10)$r.squared
+  p_val_s_1[i] = pf(summary(fit_1)$fstatistic[1],summary(fit_1)$fstatistic[2], summary(fit_1)$fstatistic[3], lower.tail = FALSE )
+  p_val_s_5[i] = pf(summary(fit_5)$fstatistic[1],summary(fit_5)$fstatistic[2], summary(fit_5)$fstatistic[3], lower.tail = FALSE )
+  p_val_s_10[i] = pf(summary(fit_10)$fstatistic[1],summary(fit_10)$fstatistic[2], summary(fit_10)$fstatistic[3], lower.tail = FALSE )
+}
+
+
+# non- significant model sigma = 1,5,10
+
+f_stat_ns_1 = rep(0, num_sims)
+p_val_ns_1 = rep(0, num_sims)
+r2_ns_1 = rep(0, num_sims)
+f_stat_ns_5 = rep(0, num_sims)
+p_val_ns_5 = rep(0, num_sims)
+r2_ns_5 = rep(0, num_sims)
+f_stat_ns_10 = rep(0, num_sims)
+p_val_ns_10 = rep(0, num_sims)
+r2_ns_10 = rep(0, num_sims)
+
+for(i in 1:num_sims) {
+  eps1           = rnorm(n, mean = 0 , sd = 1)
+  eps5           = rnorm(n, mean = 0 , sd = 5)
+  eps10           = rnorm(n, mean = 0 , sd = 10)
+  sim_data_ns_1$y_ns_1    = beta_0_ns * x0 + beta_1_ns * x1 + beta_2_ns * x2 + beta_3_ns * x3 + eps1
+  sim_data_ns_5$y_ns_5    = beta_0_ns * x0 + beta_1_ns * x1 + beta_2_ns * x2 + beta_3_ns * x3 + eps5
+  sim_data_ns_10$y_ns_10    = beta_0_ns * x0 + beta_1_ns * x1 + beta_2_ns * x2 + beta_3_ns * x3 + eps10
+  fit_1           = lm(y_ns_1 ~ x1 + x2 + x3, data = sim_data_ns_1)
+  fit_5          = lm(y_ns_5 ~ x1 + x2 + x3, data = sim_data_ns_5)
+  fit_10          = lm(y_ns_10 ~ x1 + x2 + x3, data = sim_data_ns_10)
+  f_stat_ns_1[i] = summary(fit_1)$fstatistic
+  f_stat_ns_5[i] = summary(fit_5)$fstatistic
+  f_stat_ns_10[i] = summary(fit_10)$fstatistic
+  r2_ns_1[i] = summary(fit_1)$r.squared
+  r2_ns_5[i] = summary(fit_5)$r.squared
+  r2_ns_10[i] = summary(fit_10)$r.squared
+  p_val_ns_1[i] = pf(summary(fit_1)$fstatistic[1],summary(fit_1)$fstatistic[2], summary(fit_1)$fstatistic[3], lower.tail = FALSE )
+  p_val_ns_5[i] = pf(summary(fit_5)$fstatistic[1],summary(fit_5)$fstatistic[2], summary(fit_5)$fstatistic[3], lower.tail = FALSE )
+  p_val_ns_10[i] = pf(summary(fit_10)$fstatistic[1],summary(fit_10)$fstatistic[2], summary(fit_10)$fstatistic[3], lower.tail = FALSE )
+}
+
+
+
+```
+Results:
+
+The results stored in variables are used to plot histograms for the simulated empirical values. The true value curves are plotted on top of the simulated histograms. There are 3 grids created each for F-stat, R-Squared and p-value. The grids are 2x3 in nature, allowing easy visual comparision.
+
+F-stats of the non-significant model has the closest match between the simulated and true values.
+
+
+
+```{r}
+par(mfrow = c(2,3));
+
+# F statistic comparision grid
+hist(f_stat_s_1, prob = TRUE, breaks = 20, 
+     xlab = "f-statistic", main = "F Stat -S- sigma = 1", border = "dodgerblue")
+x = f_stat_s_1
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3, xlim = c(0,150), ylim = c(0.000, 0.005))
+
+hist(f_stat_s_5, prob = TRUE, breaks = 20, 
+     xlab = "f-statistic", main = "F Stat -S- sigma = 5", border = "dodgerblue")
+x = f_stat_s_5
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3, ylim = c(0.000, 0.900))
+
+hist(f_stat_s_10, prob = TRUE, breaks = 20, 
+     xlab = "f-statistic", main = "F Stat -S- sigma = 10", border = "dodgerblue")
+x = f_stat_s_10
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(f_stat_ns_1, prob = TRUE, breaks = 20, 
+     xlab = "f-statistic", main = "F Stat -NS- sigma = 1", border = "dodgerblue")
+x = f_stat_ns_1
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(f_stat_ns_5, prob = TRUE, breaks = 20, 
+     xlab = "f-statistic", main = "F Stat -NS- sigma = 5", border = "dodgerblue")
+x = f_stat_ns_5
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(f_stat_ns_10, prob = TRUE, breaks = 20, 
+     xlab = "f-statistic", main = "F Stat -S- sigma = 10", border = "dodgerblue")
+x = f_stat_ns_10
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+# R Squared comparision grid
+
+hist(r2_s_1, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "R2 -S- sigma = 1", border = "dodgerblue")
+x = r2_s_1
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(r2_s_5, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "R2 -S- sigma = 5", border = "dodgerblue")
+x = r2_s_1
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(r2_s_10, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "R2 -S- sigma = 10", border = "dodgerblue")
+x = r2_s_10
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(r2_ns_1, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "R2 -NS- sigma = 1", border = "dodgerblue")
+x = r2_ns_1
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(r2_ns_5, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "R2 -NS- sigma = 5", border = "dodgerblue")
+x = r2_ns_5
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(r2_ns_10, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "R2 -NS- sigma = 10", border = "dodgerblue")
+x = r2_ns_10
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+# p-value comparision grid
+
+hist(p_val_s_1, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "p_val -S- sigma = 1", border = "dodgerblue")
+x = p_val_s_1
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(p_val_s_5, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "p_val -S- sigma = 5", border = "dodgerblue")
+x = p_val_s_5
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(p_val_s_10, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "p_val -S- sigma = 10", border = "dodgerblue")
+x = p_val_s_10
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(p_val_ns_1, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "p_val -NS- sigma = 1", border = "dodgerblue")
+x = p_val_ns_1
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(p_val_ns_5, prob = TRUE, breaks = 20, 
+     xlab = "r.squared", main = "p_val -NS- sigma = 5", border = "dodgerblue")
+x = p_val_ns_5
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+hist(p_val_ns_10, prob = TRUE, breaks = 20, 
+     xlab = "p-val", main = "p_val -NS- sigma = 10", border = "dodgerblue")
+x = p_val_ns_10
+curve(df(x, df1 = 3, df2 = 21), col = "darkorange", add = TRUE, lwd = 3)
+
+```
+
+Discussions:
+
+"Do we know the true distribution of any of these values?"
+"How do the empirical distributions from the simulations compare to the true distributions? (You could consider adding a curve for the true distributions if you know them.)"
+"How are R2 and ?? related? Is the relationship the same for the significant and non-significant models?"
+
+Significant Model: 
+the F-stat is not following a F distribution. So the p-value is not uniform either. R-squared distribution is not uniform as it follows the F distribution. True distribution of the significant models are not derived. 
+Empirical distributions deviate from the true distributions.
+There does not exist a derivable relation between R-squared and sigma for significant model.
+
+Non-significant Model: 
+the F-stat is following a F distribution. So the p-value is uniform. Also, p-value is the inverted F-stat distribution and the plots look to justify this. R-squared distribution is uniform as it follows the F distribution. True distribution of the non-significant models are derived here.
+Empirical distributions are consistent with the true distributions.
+R-squared distribution contentrates towards zero as sigma increases.
+
+
+Simulation Study 2: Using RMSE for Selection?
+
+Introduction:
+
+The objective is to analyse the Root Mean Square Error for the given models in the dataset and various values of the required parameters( sample size, noise, predictors). The sample size is divided into test and train datasets. The model is simulated with train dataset. Trained model is tested on the test dataset for an unbiased evaluation. The relation between each noise level and the RMSE is analysed in this simulation project.
+
+Methods:
+
+The methods include:
+1. variable declaration and assignment
+2. splitting sample size to train and test datasets
+3. defining RMSE function which takes the actual and predicted values and calculates RMSE
+4. using lm model to implement the MLR for the given 9 model combinations
+5. using the lm models to calculate the RMSE.
+6. Results and Analysis.
+
+```{r message=FALSE, warning=FALSE, cache=TRUE}
+birthday = 19850802
+set.seed(birthday)
+
+data2 = read.csv("study_2.csv")
+#View(data2)
+
+sigma2 = c(1,2,4)
+n2 = 500
+num_sims2 = 1000
+
+x0 = rep(1,n2)
+x1 = data2[,2]
+x2 = data2[,3]
+x3 = data2[,4]
+x4 = data2[,5]
+x5 = data2[,6]
+x6 = data2[,7]
+x7 = data2[,8]
+x8 = data2[,9]
+x9 = data2[,10]
+
+beta_0 = 0
+beta_1 = 5
+beta_2 = -4
+beta_3 = 1.6
+beta_4 = -1.1
+beta_5 = 0.7
+beta_6 = 0.3
+
+
+sim_m1 = rep(0, length(sigma2))
+sim_m2 = rep(0, length(sigma2))
+sim_m3 = rep(0, length(sigma2))
+sim_m4 = rep(0, length(sigma2))
+sim_m5 = rep(0, length(sigma2))
+sim_m6 = rep(0, length(sigma2))
+sim_m7 = rep(0, length(sigma2))
+sim_m8 = rep(0, length(sigma2))
+sim_m9 = rep(0, length(sigma2))
+
+
+rmse_trn_m1_1 = rep(0, num_sims2)
+rmse_trn_m2_1 = rep(0, num_sims2)
+rmse_trn_m3_1 = rep(0, num_sims2)
+rmse_trn_m4_1 = rep(0, num_sims2)
+rmse_trn_m5_1 = rep(0, num_sims2)
+rmse_trn_m6_1 = rep(0, num_sims2)
+rmse_trn_m7_1 = rep(0, num_sims2)
+rmse_trn_m8_1 = rep(0, num_sims2)
+rmse_trn_m9_1 = rep(0, num_sims2)
+
+rmse_tst_m1_1 = rep(0, num_sims2)
+rmse_tst_m2_1 = rep(0, num_sims2)
+rmse_tst_m3_1 = rep(0, num_sims2)
+rmse_tst_m4_1 = rep(0, num_sims2)
+rmse_tst_m5_1 = rep(0, num_sims2)
+rmse_tst_m6_1 = rep(0, num_sims2)
+rmse_tst_m7_1 = rep(0, num_sims2)
+rmse_tst_m8_1 = rep(0, num_sims2)
+rmse_tst_m9_1 = rep(0, num_sims2)
+
+rmse_trn_m1_2 = rep(0, num_sims2)
+rmse_trn_m2_2 = rep(0, num_sims2)
+rmse_trn_m3_2 = rep(0, num_sims2)
+rmse_trn_m4_2 = rep(0, num_sims2)
+rmse_trn_m5_2 = rep(0, num_sims2)
+rmse_trn_m6_2 = rep(0, num_sims2)
+rmse_trn_m7_2 = rep(0, num_sims2)
+rmse_trn_m8_2 = rep(0, num_sims2)
+rmse_trn_m9_2 = rep(0, num_sims2)
+
+rmse_tst_m1_2 = rep(0, num_sims2)
+rmse_tst_m2_2 = rep(0, num_sims2)
+rmse_tst_m3_2 = rep(0, num_sims2)
+rmse_tst_m4_2 = rep(0, num_sims2)
+rmse_tst_m5_2 = rep(0, num_sims2)
+rmse_tst_m6_2 = rep(0, num_sims2)
+rmse_tst_m7_2 = rep(0, num_sims2)
+rmse_tst_m8_2 = rep(0, num_sims2)
+rmse_tst_m9_2 = rep(0, num_sims2)
+
+rmse_trn_m1_4 = rep(0, num_sims2)
+rmse_trn_m2_4 = rep(0, num_sims2)
+rmse_trn_m3_4 = rep(0, num_sims2)
+rmse_trn_m4_4 = rep(0, num_sims2)
+rmse_trn_m5_4 = rep(0, num_sims2)
+rmse_trn_m6_4 = rep(0, num_sims2)
+rmse_trn_m7_4 = rep(0, num_sims2)
+rmse_trn_m8_4 = rep(0, num_sims2)
+rmse_trn_m9_4 = rep(0, num_sims2)
+
+rmse_tst_m1_4 = rep(0, num_sims2)
+rmse_tst_m2_4 = rep(0, num_sims2)
+rmse_tst_m3_4 = rep(0, num_sims2)
+rmse_tst_m4_4 = rep(0, num_sims2)
+rmse_tst_m5_4 = rep(0, num_sims2)
+rmse_tst_m6_4 = rep(0, num_sims2)
+rmse_tst_m7_4 = rep(0, num_sims2)
+rmse_tst_m8_4 = rep(0, num_sims2)
+rmse_tst_m9_4 = rep(0, num_sims2)
+
+least_rmse_sigma_1 = rep(0, num_sims2)
+least_rmse_sigma_2 = rep(0, num_sims2)
+least_rmse_sigma_4 = rep(0, num_sims2)
+
+
+
+
+# sim_trn_idx = sample(1:nrow(data2), 250)
+# sim_trn = data2[sim_trn_idx, ]
+# #str(sim_trn)
+# #str(Auto)
+# sim_tst  = data2[-sim_trn_idx, ]
+
+rmse = function(actual, predicted) {
+  sqrt(mean((actual - predicted) ^ 2))
+}
+
+#str(sim_tst)
+#https://stackoverflow.com/questions/17200114/how-to-split-data-into-training-testing-sets-using-sample-function
+
+for(j in 1:length(sigma2)) {
+  
+  for (i in 1:num_sims2 ){
+    
+    eps        = rnorm(n, mean = 0, sd = sigma2[j])  
+    y          = beta_0 * x0 + beta_1 * x1 + beta_2 * x2 + beta_3 * x3 + beta_4 * x4 + beta_5 * x5 + beta_6 * x6 + x7 + x8 + x9 + eps
+    sim_data   = data.frame(x1, x2, x3, x4, x5, x6, x7, x8, x9, y)
+    
+    sim_trn_idx = sample(1:nrow(sim_data), 250)
+    sim_trn = sim_data[sim_trn_idx,]
+    sim_tst  = sim_data[-sim_trn_idx,]
+    
+    
+    sim_m1 = lm(y ~ x1, data = sim_trn)
+    sim_m2 = lm(y ~ x1 + x2, data = sim_trn)
+    sim_m3 = lm(y ~ x1 + x2 + x3, data = sim_trn)
+    sim_m4 = lm(y ~ x1 + x2 + x3 + x4, data = sim_trn)
+    sim_m5 = lm(y ~ x1 + x2 + x3 + x4 + x5, data = sim_trn)
+    sim_m6 = lm(y ~ x1 + x2 + x3 + x4 + x5 + x6, data = sim_trn)
+    sim_m7 = lm(y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7, data = sim_trn)
+    sim_m8 = lm(y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8, data = sim_trn)
+    sim_m9 = lm(y ~ x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9, data = sim_trn)
+    
+    
+    if(j == 1){
+      rmse_trn_m1_1[i] = rmse(sim_trn$y, predict(sim_m1))
+      rmse_trn_m2_1[i] = rmse(sim_trn$y, predict(sim_m2))
+      rmse_trn_m3_1[i] = rmse(sim_trn$y, predict(sim_m3))
+      rmse_trn_m4_1[i] = rmse(sim_trn$y, predict(sim_m4))
+      rmse_trn_m5_1[i] = rmse(sim_trn$y, predict(sim_m5))
+      rmse_trn_m6_1[i] = rmse(sim_trn$y, predict(sim_m6))
+      rmse_trn_m7_1[i] = rmse(sim_trn$y, predict(sim_m7))
+      rmse_trn_m8_1[i] = rmse(sim_trn$y, predict(sim_m8))
+      rmse_trn_m9_1[i] = rmse(sim_trn$y, predict(sim_m9))
+      
+      rmse_tst_m1_1[i] = rmse(sim_tst$y, predict(sim_m1, sim_tst))
+      rmse_tst_m2_1[i] = rmse(sim_tst$y, predict(sim_m2, sim_tst))
+      rmse_tst_m3_1[i] = rmse(sim_tst$y, predict(sim_m3, sim_tst))
+      rmse_tst_m4_1[i] = rmse(sim_tst$y, predict(sim_m4, sim_tst))
+      rmse_tst_m5_1[i] = rmse(sim_tst$y, predict(sim_m5, sim_tst))
+      rmse_tst_m6_1[i] = rmse(sim_tst$y, predict(sim_m6, sim_tst))
+      rmse_tst_m7_1[i] = rmse(sim_tst$y, predict(sim_m7, sim_tst))
+      rmse_tst_m8_1[i] = rmse(sim_tst$y, predict(sim_m8, sim_tst))
+      rmse_tst_m9_1[i] = rmse(sim_tst$y, predict(sim_m9, sim_tst))
+      
+      
+    }
+    else if(j == 2){
+      
+      rmse_trn_m1_2[i] = rmse(sim_trn$y, predict(sim_m1))
+      rmse_trn_m2_2[i] = rmse(sim_trn$y, predict(sim_m2))
+      rmse_trn_m3_2[i] = rmse(sim_trn$y, predict(sim_m3))
+      rmse_trn_m4_2[i] = rmse(sim_trn$y, predict(sim_m4))
+      rmse_trn_m5_2[i] = rmse(sim_trn$y, predict(sim_m5))
+      rmse_trn_m6_2[i] = rmse(sim_trn$y, predict(sim_m6))
+      rmse_trn_m7_2[i] = rmse(sim_trn$y, predict(sim_m7))
+      rmse_trn_m8_2[i] = rmse(sim_trn$y, predict(sim_m8))
+      rmse_trn_m9_2[i] = rmse(sim_trn$y, predict(sim_m9))
+      
+      rmse_tst_m1_2[i] = rmse(sim_tst$y, predict(sim_m1, sim_tst))
+      rmse_tst_m2_2[i] = rmse(sim_tst$y, predict(sim_m2, sim_tst))
+      rmse_tst_m3_2[i] = rmse(sim_tst$y, predict(sim_m3, sim_tst))
+      rmse_tst_m4_2[i] = rmse(sim_tst$y, predict(sim_m4, sim_tst))
+      rmse_tst_m5_2[i] = rmse(sim_tst$y, predict(sim_m5, sim_tst))
+      rmse_tst_m6_2[i] = rmse(sim_tst$y, predict(sim_m6, sim_tst))
+      rmse_tst_m7_2[i] = rmse(sim_tst$y, predict(sim_m7, sim_tst))
+      rmse_tst_m8_2[i] = rmse(sim_tst$y, predict(sim_m8, sim_tst))
+      rmse_tst_m9_2[i] = rmse(sim_tst$y, predict(sim_m9, sim_tst))
+      
+      
+    }
+    else if(j == 3) {
+      
+      rmse_trn_m1_4[i] = rmse(sim_trn$y, predict(sim_m1))
+      rmse_trn_m2_4[i] = rmse(sim_trn$y, predict(sim_m2))
+      rmse_trn_m3_4[i] = rmse(sim_trn$y, predict(sim_m3))
+      rmse_trn_m4_4[i] = rmse(sim_trn$y, predict(sim_m4))
+      rmse_trn_m5_4[i] = rmse(sim_trn$y, predict(sim_m5))
+      rmse_trn_m6_4[i] = rmse(sim_trn$y, predict(sim_m6))
+      rmse_trn_m7_4[i] = rmse(sim_trn$y, predict(sim_m7))
+      rmse_trn_m8_4[i] = rmse(sim_trn$y, predict(sim_m8))
+      rmse_trn_m9_4[i] = rmse(sim_trn$y, predict(sim_m9))
+      
+      rmse_tst_m1_4[i] = rmse(sim_tst$y, predict(sim_m1, sim_tst))
+      rmse_tst_m2_4[i] = rmse(sim_tst$y, predict(sim_m2, sim_tst))
+      rmse_tst_m3_4[i] = rmse(sim_tst$y, predict(sim_m3, sim_tst))
+      rmse_tst_m4_4[i] = rmse(sim_tst$y, predict(sim_m4, sim_tst))
+      rmse_tst_m5_4[i] = rmse(sim_tst$y, predict(sim_m5, sim_tst))
+      rmse_tst_m6_4[i] = rmse(sim_tst$y, predict(sim_m6, sim_tst))
+      rmse_tst_m7_4[i] = rmse(sim_tst$y, predict(sim_m7, sim_tst))
+      rmse_tst_m8_4[i] = rmse(sim_tst$y, predict(sim_m8, sim_tst))
+      rmse_tst_m9_4[i] = rmse(sim_tst$y, predict(sim_m9, sim_tst))
+      
+      
+    }
+    
+    sel1 = data.frame(
+      Models = c("Model_1", "Model_2","Model_3","Model_4","Model_5","Model_6"),
+      Values = c(rmse_tst_m1_1[i],rmse_tst_m2_1[i],rmse_tst_m3_1[i],rmse_tst_m4_1[i],rmse_tst_m5_1[i],rmse_tst_m6_1[i]))
+    
+    sel2 = data.frame(
+      Models = c("Model_1", "Model_2","Model_3","Model_4","Model_5","Model_6"),
+      Values = c(rmse_tst_m1_2[i],rmse_tst_m2_2[i],rmse_tst_m3_2[i],rmse_tst_m4_2[i],rmse_tst_m5_2[i],rmse_tst_m6_2[i]))
+    
+    sel4 = data.frame(
+      Models = c("Model_1", "Model_2","Model_3","Model_4","Model_5","Model_6"),
+      Values = c(rmse_tst_m1_4[i],rmse_tst_m2_4[i],rmse_tst_m3_4[i],rmse_tst_m4_4[i],rmse_tst_m5_4[i],rmse_tst_m6_4[i]))
+    
+    least_rmse_sigma_1[i] = sel1$Models[which.min(sel1$Values)]
+    least_rmse_sigma_2[i] = sel2$Models[which.min(sel2$Values)]
+    least_rmse_sigma_4[i] = sel4$Models[which.min(sel4$Values)]  
+    
+    
+    
+  }
+  
+  
+}
+```
+
+Results:
+
+Using the referenced discussion, group bar charts are implemented using reshape and ggplot libraries. The installation of these packages are not included in the instructions.
+
+1. Model 9 is the noisiest and also has all the predictors of the question. As such overfitting is valid and this results in lowest RMSE for all sigma levels. 
+
+2. But generally, Train RMSE is lower than Test RMSE for each model. Also, both average Test RMSE  and average Train RMSE, gradually decrease with increase in predictors and noise.
+
+3. Excluding models 7,8,9 which are the noisiest among the 9 models, it is observed that the model 6 in question is picked up most of the time for all noise levels throughout the simulations.
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# reference: https://stackoverflow.com/questions/42459398/grouped-bar-plot-in-r
+
+df_1 = data.frame(
+  Sigma1 = rep(c("Train RMSE", "Test RMSE"), 9),
+  Models = c(rep("Model_1", 2), rep("Model_2", 2),rep("Model_3", 2),rep("Model_4", 2),rep("Model_5", 2),rep("Model_6", 2),rep("Model_7", 2),rep("Model_8", 2),rep("Model_9", 2)),
+  Values = c(mean(rmse_trn_m1_1),mean(rmse_tst_m1_1), mean(rmse_trn_m2_1),mean(rmse_tst_m2_1),mean(rmse_trn_m3_1),mean(rmse_tst_m3_1),mean(rmse_trn_m4_1),mean(rmse_tst_m4_1),mean(rmse_trn_m5_1),mean(rmse_tst_m5_1),mean(rmse_trn_m6_1),mean(rmse_tst_m6_1),mean(rmse_trn_m7_1),mean(rmse_tst_m7_1),mean(rmse_trn_m8_1),mean(rmse_tst_m8_1),mean(rmse_trn_m9_1),mean(rmse_tst_m9_1))
+)
+
+#
+df_2 = data.frame(
+  Sigma2 = rep(c("Train RMSE", "Test RMSE"), 9),
+  Models = c(rep("Model_1", 2), rep("Model_2", 2),rep("Model_3", 2),rep("Model_4", 2),rep("Model_5", 2),rep("Model_6", 2),rep("Model_7", 2),rep("Model_8", 2),rep("Model_9", 2)),
+  Values = c(mean(rmse_trn_m1_2),mean(rmse_tst_m1_2), mean(rmse_trn_m2_2),mean(rmse_tst_m2_2),mean(rmse_trn_m3_2),mean(rmse_tst_m3_2),mean(rmse_trn_m4_2),mean(rmse_tst_m4_2),mean(rmse_trn_m5_2),mean(rmse_tst_m5_2),mean(rmse_trn_m6_2),mean(rmse_tst_m6_2),mean(rmse_trn_m7_2),mean(rmse_tst_m7_2),mean(rmse_trn_m8_2),mean(rmse_tst_m8_2),mean(rmse_trn_m9_2),mean(rmse_tst_m9_2))
+)
+#
+#
+df_4 = data.frame(
+  Sigma4 = rep(c("Train RMSE", "Test RMSE"), 9),
+  Models = c(rep("Model_1", 2), rep("Model_2", 2),rep("Model_3", 2),rep("Model_4", 2),rep("Model_5", 2),rep("Model_6", 2),rep("Model_7", 2),rep("Model_8", 2),rep("Model_9", 2)),
+  Values = c(mean(rmse_trn_m1_4),mean(rmse_tst_m1_4), mean(rmse_trn_m2_4),mean(rmse_tst_m2_4),mean(rmse_trn_m3_4),mean(rmse_tst_m3_4),mean(rmse_trn_m4_4),mean(rmse_tst_m4_4),mean(rmse_trn_m5_4),mean(rmse_tst_m5_4),mean(rmse_trn_m6_4),mean(rmse_tst_m6_4),mean(rmse_trn_m7_4),mean(rmse_tst_m7_4),mean(rmse_trn_m8_4),mean(rmse_tst_m8_4),mean(rmse_trn_m9_4),mean(rmse_tst_m9_4))
+)
+
+library(reshape)
+library(ggplot2)
+
+df.m = melt(df_1)
+ggplot(df.m, aes(Models, value, fill = Sigma1)) + 
+  geom_bar(stat="identity", position = "dodge")
+
+df.m = melt(df_2)
+ggplot(df.m, aes(Models, value, fill = Sigma2)) +
+  geom_bar(stat="identity", position = "dodge")
+
+
+df.m = melt(df_4)
+ggplot(df.m, aes(Models, value, fill = Sigma4)) +
+  geom_bar(stat="identity", position = "dodge" )
+
+#counting frequencies
+
+plot(least_rmse_sigma_1)
+hist(least_rmse_sigma_2)
+hist(least_rmse_sigma_4)
+```
+Discussions:
+
+"Does the method always select the correct model? On average, does is select the correct model?"
+"How does the level of noise affect the results?"
+
+Exclucing the overfitting cases( considering Model 1 to 6), the method does select the correct model. Considering all models, the method is biased towards the overfitting cases.
+
+Level of noise does not affect the least RMSE model selection. The method always picks Model 6 for all noise levels. Level of noise does add to an average decrease in Test RMSE values.
+
+Simulation Study 3: Power
+
+
+Introduction:
+
+The objective is to calculate Power( total null hypthesis rejections/ total simulations). LM model is used for calculating the Power. To calculate Power,I initially used the confidence interval for the significance level in question, but the plot did not seem correct. Later I used the usual method from the values derived from the lm operation.
+
+
+Method:
+
+1. Varibale declaration and assignment.
+2. Create and empty Dataframe to store results from simulations. Calculate rownumbers for this dataframe( != total simulations)
+3. Run nested for loops for sigma, beta_1, sample size and number of simulations.
+4. Re-organize the result dataframe to group the results by noise levels( required for analysis and plotting). Use library dplyr for this.
+5. For each group of results, plot the results for a relation between beta_1, power and sample size.
+
+```{r message=FALSE, warning=FALSE, cache=TRUE, paged.print=FALSE}
+birthday = 19850802
+set.seed(birthday)
+
+beta_0_sim3 = 0
+beta_1_sim3 = seq(-2,2,0.1)
+sigma_sim3 = c(1,2,4)
+n = c(10,20,30)
+num_sims3 = 1000
+alpha_sim3 = 0.05
+sig_level = 1 - alpha_sim3
+
+t_rows = length(sigma_sim3)*length(n)*length(beta_1_sim3)
+
+df = data.frame(rep(0, t_rows), rep(0, t_rows), rep(0, t_rows), rep(0, t_rows))
+names(df) = c("sigma", "n", "beta_1", "power")
+row = 1
+
+for(i in 1: length(sigma_sim3)){
+  for( j in 1: length(n)){
+    
+    x_values = seq(0, 5, length = n[j])
+    
+    for( k in 1: length(beta_1_sim3)){
+      
+      test_reject = 0
+      
+      for( l in 1: num_sims3){
+        
+        eps_sim3        = rnorm(n[j], mean = 0, sd = sigma_sim3[i])  
+        y_sim3          = beta_0_sim3 + beta_1_sim3[k] * x_values + eps_sim3
+        sim3_data   = data.frame(x_values, y_sim3) 
+        sim3_model = lm(sim3_data$y_sim3 ~ x_values, data = sim3_data)
+        #confidence = confint(sim3_model, level = sig_level)[2,]
+        
+        if(summary(sim3_model)$coefficients[2,"Pr(>|t|)"] < alpha_sim3){
+          
+          test_reject =  test_reject + 1
+        }
+
+      }
+      
+      
+     
+      df[row, 1] = sigma_sim3[i];
+      df[row, 2] = n[j];
+      df[row, 3] = beta_1_sim3[k]
+      df[row, 4] = test_reject / num_sims3;
+
+      row = row + 1;
+      
+       
+    }
+    
+  }
+  
+}
+
+```
+
+Results:
+
+1. Generally the power decreases towards zero, for beta_1 = zero. For all other beta_1 values the power is non-zero and approaches the value 1 for very low and very high beta_1 values.
+2. For lower sample size, the power value for a given beta_1, is lesser. Power increases with higher sample size for a given beta_1.
+3. Lower sigma shows lower power.
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+
+#reference: working with dplyr https://datacarpentry.org/R-ecology-lesson/03-dplyr.html
+
+library(dplyr)
+sigma_group = df %>% group_by(sigma)
+
+for(m in  1: length(sigma_sim3)){
+
+    sigma_new = sigma_group %>%
+    filter(sigma == sigma_sim3[m])
+  
+sample_10 = data.frame(sigma_new[which(sigma_new[,'n'] == 10), ])
+sample_20 = data.frame(sigma_new[which(sigma_new[,'n'] == 20), ])
+sample_30 = data.frame(sigma_new[which(sigma_new[,'n'] == 30), ])
+
+
+plot(sigma_new$beta_1, sigma_new$power, 
+       type = "n",
+       main = paste("Power Vs Beta - Sigma", sigma_sim3[m]),
+       ylab = "Power",
+       xlab = "Beta_1"
+       )
+
+  lines(sample_10$beta_1, sample_10$power, col = "red")
+  lines(sample_20$beta_1, sample_20$power, col = "green")
+  lines(sample_30$beta_1, sample_30$power, col = "blue")
+  
+}
+
+        
+```
+
+Discussions:
+
+Generally the power decreases towards zero, for beta_1 = zero. For all other beta_1 values the power is non-zero and approaches the value 1 for very low and very high beta_1 values.For lower sample size, the power value for a given beta_1, is lesser. Power increases with higher sample size for a given beta_1.Lower sigma shows lower power.
+
+1000 simulations are sufficient to understand the observations. Higher simulations show similar results.
